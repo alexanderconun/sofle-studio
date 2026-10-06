@@ -32,6 +32,7 @@ import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import { deserializeLayoutZoom, LayoutZoom } from "./PhysicalLayout";
 import { useLocalStorageState } from "../misc/useLocalStorageState";
 import { planImport, saveLayoutFile, toLayoutFile } from "./layoutFile";
+import { Practice } from "./Practice";
 import { emit, listen } from "@tauri-apps/api/event";
 import { Window } from "@tauri-apps/api/window";
 
@@ -512,6 +513,7 @@ export default function Keyboard() {
     await w.show();
   }, []);
 
+  const [practiceOpen, setPracticeOpen] = useState(false);
   const [fileStatus, setFileStatus] = useState<string | null>(null);
 
   const exportLayout = useCallback(async () => {
@@ -624,6 +626,13 @@ export default function Keyboard() {
                   }}
                 />
               </label>
+              <button
+                type="button"
+                className="h-8 rounded px-2 bg-base-100 hover:bg-primary hover:text-primary-content"
+                onClick={() => setPracticeOpen(true)}
+              >
+                Practice
+              </button>
               {window.__TAURI_INTERNALS__ && (
                 <button
                   type="button"
@@ -642,6 +651,15 @@ export default function Keyboard() {
           </div>
         )}
       </div>
+      {practiceOpen && keymap && layout && (
+        <Practice
+          open={practiceOpen}
+          onClose={() => setPracticeOpen(false)}
+          keymap={keymap}
+          layout={layout}
+          behaviors={behaviors}
+        />
+      )}
       {layouts && keymap && behaviors && (
         <div className="p-2 col-start-2 row-start-1 grid items-center justify-center relative min-w-0">
           <KeymapComp
