@@ -25,8 +25,16 @@ export const hidUsageForMacKey = (code: number): number | undefined => {
   return id === undefined ? undefined : (7 << 16) | id;
 };
 
-// Key positions on `layerIndex` whose (effective) Key Press binding sends one
-// of the held usages. Transparent keys fall through to lower layers.
+// Fold right-hand modifier bits onto left: 0x01 Ctrl, 0x02 Shift, 0x04 Opt, 0x08 Cmd.
+const foldMods = (m: number) => (m | (m >> 4)) & 0x0f;
+const popcount = (m: number) => m.toString(2).replace(/0/g, "").length;
+const isModUsage = (u: number) => u >= 0x700e0 && u <= 0x700e7;
+
+// Key positions on `layerIndex` that best explain what's held on the Mac.
+// The Mac only sees "Shift down, 9 down", so for each held key we pick the
+// binding whose built-in modifiers (e.g. "(" = ⇧9, "⌘←") match the held
+// modifiers most specifically, and don't light the modifier keys those
+// built-in modifiers account for. Transparent keys fall through.
 // ponytail: media keys (volume, play) aren't seen by the key tap, so they
 // never light up; would need NSSystemDefined events.
 export function pressedPositions(
@@ -37,15 +45,37 @@ export function pressedPositions(
 ): Set<number> {
   const out = new Set<number>();
   if (!held.size || !keymap.layers[layerIndex]) return out;
-  const name = (id: number) => behaviors[id]?.displayName.toLowerCase();
+
+  // Effective Key Press binding per position: [position, base usage, folded mods].
+  const keys: [number, number, number][] = [];
   keymap.layers[layerIndex].bindings.forEach((_, pos) => {
     for (let li = layerIndex; li >= 0; li--) {
       const b = keymap.layers[li].bindings[pos];
-      const n = name(b.behaviorId);
+      const n = behaviors[b.behaviorId]?.displayName.toLowerCase();
       if (n === "transparent") continue;
-      if (n === "key press" && held.has(b.param1 & 0xffffff)) out.add(pos);
+      if (n === "key press") keys.push([pos, b.param1 & 0xffffff, foldMods(b.param1 >>> 24)]);
       break;
     }
   });
+
+  const heldMods = foldMods(
+    [...held].filter(isModUsage).reduce((m, u) => m | (1 << (u - 0x700e0)), 0)
+  );
+  let explained = 0;
+  for (const u of held) {
+    if (isModUsage(u)) continue;
+    const fits = keys.filter(([, base, mods]) => base === u && (mods & ~heldMods) === 0);
+    const best = Math.max(-1, ...fits.map(([, , mods]) => popcount(mods)));
+    for (const [pos, , mods] of fits) {
+      if (popcount(mods) === best) {
+        out.add(pos);
+        explained |= mods;
+      }
+    }
+  }
+  for (const u of held) {
+    if (!isModUsage(u) || foldMods(1 << (u - 0x700e0)) & explained) continue;
+    for (const [pos, base] of keys) if (base === u) out.add(pos);
+  }
   return out;
 }

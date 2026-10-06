@@ -19,6 +19,8 @@ export interface OverlayData {
 const layerFor = (lower: boolean, raise: boolean) =>
   lower && raise ? 3 : lower ? 1 : raise ? 2 : 0;
 
+const physicallyDown = new Set<number>();
+
 // Always-on-top window that shows the layer currently held on the keyboard.
 export const Overlay = () => {
   const [data, setData] = useState<OverlayData | null>(null);
@@ -40,11 +42,20 @@ export const Overlay = () => {
       listen<[number, boolean]>("key-event", (e) => {
         const usage = hidUsageForMacKey(e.payload[0]);
         if (usage === undefined) return;
-        setKeysDown((s) => {
-          const next = new Set(s);
-          e.payload[1] ? next.add(usage) : next.delete(usage);
-          return next;
-        });
+        const update = (down: boolean) =>
+          setKeysDown((s) => {
+            const next = new Set(s);
+            down ? next.add(usage) : next.delete(usage);
+            return next;
+          });
+        if (e.payload[1]) {
+          physicallyDown.add(usage);
+          update(true);
+        } else {
+          // Keep quick taps visible for a moment.
+          physicallyDown.delete(usage);
+          setTimeout(() => !physicallyDown.has(usage) && update(false), 250);
+        }
       }),
       listen<[string, boolean]>("layer-key", (e) => {
         const [key, pressed] = e.payload;
