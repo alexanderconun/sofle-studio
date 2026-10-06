@@ -6,6 +6,7 @@ import { useLocalStorageState } from "../misc/useLocalStorageState";
 import type { Keymap as KeymapMsg, PhysicalLayout } from "@zmkfirmware/zmk-studio-ts-client/keymap";
 import type { GetBehaviorDetailsResponse } from "@zmkfirmware/zmk-studio-ts-client/behaviors";
 import { Keymap } from "./Keymap";
+import { hidUsageForMacKey, pressedPositions } from "./pressedKeys";
 
 export interface OverlayData {
   keymap: KeymapMsg;
@@ -22,6 +23,7 @@ const layerFor = (lower: boolean, raise: boolean) =>
 export const Overlay = () => {
   const [data, setData] = useState<OverlayData | null>(null);
   const [held, setHeld] = useState({ lower: false, raise: false });
+  const [keysDown, setKeysDown] = useState<Set<number>>(new Set());
   const [opacity, setOpacity] = useLocalStorageState<number>("overlayOpacity", 0.9, {
     deserialize: (v) => Math.min(1, Math.max(0.2, parseFloat(v) || 0.9)),
   });
@@ -35,6 +37,15 @@ export const Overlay = () => {
   useEffect(() => {
     const unlisten = [
       listen<OverlayData>("overlay-data", (e) => setData(e.payload)),
+      listen<[number, boolean]>("key-event", (e) => {
+        const usage = hidUsageForMacKey(e.payload[0]);
+        if (usage === undefined) return;
+        setKeysDown((s) => {
+          const next = new Set(s);
+          e.payload[1] ? next.add(usage) : next.delete(usage);
+          return next;
+        });
+      }),
       listen<[string, boolean]>("layer-key", (e) => {
         const [key, pressed] = e.payload;
         setHeld((h) => ({ ...h, [key]: pressed }));
@@ -101,7 +112,17 @@ export const Overlay = () => {
           layout={data.layout}
           behaviors={data.behaviors}
           scale="auto"
+          resolveTransparent
           selectedLayerIndex={layerIndex}
+          pressedPositions={(() => {
+            const p = pressedPositions(data.keymap, data.behaviors, layerIndex, keysDown);
+            // Lower/Raise themselves light up while held (they're on Base).
+            data.keymap.layers[0]?.bindings.forEach((b, pos) => {
+              const n = data.behaviors[b.behaviorId]?.displayName.toLowerCase();
+              if ((n === "lower" && held.lower) || (n === "raise" && held.raise)) p.add(pos);
+            });
+            return p;
+          })()}
           selectedKeyPosition={undefined}
           onKeyPositionClicked={() => {}}
         />

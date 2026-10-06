@@ -124,6 +124,8 @@ dependencies = [
  "async-std",
  "blocking",
  "bluest",
+ "core-foundation 0.10.0",
+ "core-graphics 0.25.0",
  "futures",
  "serde",
  "serde_json",

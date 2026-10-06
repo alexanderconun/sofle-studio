@@ -22,3 +22,7 @@ export const Base: Story = { args: { selectedLayerIndex: 0 } };
 export const Lower: Story = { args: { selectedLayerIndex: 1 } };
 export const Raise: Story = { args: { selectedLayerIndex: 2 } };
 export const Adjust: Story = { args: { selectedLayerIndex: 3 } };
+// Holding Lower and pressing ⌘← (Cmd falls through from Base).
+export const LowerPressed: Story = {
+  args: { selectedLayerIndex: 1, pressedPositions: new Set([56, 21, 54]), resolveTransparent: true },
+};

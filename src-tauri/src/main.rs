@@ -7,6 +7,7 @@ use futures::lock::Mutex;
 use tauri::{Emitter, WindowEvent};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Shortcut, ShortcutState};
 
+mod keywatch;
 mod transport;
 use transport::commands::{transport_close, transport_send_data, ActiveConnection};
 
@@ -64,6 +65,7 @@ fn main() {
             serial_list_devices,
             serial_connect,
             save_layout,
+            keywatch::start_key_watch,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

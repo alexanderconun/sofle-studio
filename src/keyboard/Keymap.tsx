@@ -19,6 +19,9 @@ export interface KeymapProps {
   scale: LayoutZoom;
   selectedLayerIndex: number;
   selectedKeyPosition: number | undefined;
+  pressedPositions?: Set<number>;
+  // Show what transparent keys fall through to (faded) instead of ▽.
+  resolveTransparent?: boolean;
   onKeyPositionClicked: (keyPosition: number) => void;
 }
 
@@ -29,6 +32,8 @@ export const Keymap = ({
   scale,
   selectedLayerIndex,
   selectedKeyPosition,
+  pressedPositions,
+  resolveTransparent,
   onKeyPositionClicked,
 }: KeymapProps) => {
   if (!keymap.layers[selectedLayerIndex]) {
@@ -48,16 +53,22 @@ export const Keymap = ({
       };
     }
 
-    const binding = keymap.layers[selectedLayerIndex].bindings[i];
+    const isTrans = (li: number) =>
+      behaviors[keymap.layers[li].bindings[i]?.behaviorId]?.displayName === "Transparent";
+    let li = selectedLayerIndex;
+    while (resolveTransparent && li > 0 && isTrans(li)) li--;
+    const binding = keymap.layers[li].bindings[i];
     const face = keyFace(
       behaviors[binding.behaviorId]?.displayName,
       binding,
       (id) => keymap.layers.find((l) => l.id === id)?.name || `${id}`
     );
+    if (li !== selectedLayerIndex) face.faded = true;
     return {
       id: `${keymap.layers[selectedLayerIndex].id}-${i}`,
       header: face.header,
       faded: face.faded,
+      pressed: pressedPositions?.has(i),
       x: k.x / 100.0,
       y: k.y / 100.0,
       width: k.width / 100,

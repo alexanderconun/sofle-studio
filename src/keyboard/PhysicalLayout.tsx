@@ -11,6 +11,7 @@ export type KeyPosition = PropsWithChildren<{
   id: string;
   header?: string;
   faded?: boolean;
+  pressed?: boolean;
   width: number;
   height: number;
   x: number;
