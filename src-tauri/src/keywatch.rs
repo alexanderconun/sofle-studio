@@ -38,7 +38,9 @@ mod imp {
         if STARTED.swap(true, Ordering::SeqCst) {
             return Ok(());
         }
+        let (tx, rx) = std::sync::mpsc::channel();
         std::thread::spawn(move || {
+            let started = tx.clone();
             let res = CGEventTap::with_enabled(
                 CGEventTapLocation::HID,
                 CGEventTapPlacement::HeadInsertEventTap,
@@ -59,13 +61,20 @@ mod imp {
                     }
                     CallbackResult::Keep
                 },
-                || CFRunLoop::run_current(),
+                move || {
+                    let _ = started.send(true);
+                    CFRunLoop::run_current()
+                },
             );
             if res.is_err() {
                 STARTED.store(false, Ordering::SeqCst);
+                let _ = tx.send(false);
             }
         });
-        Ok(())
+        match rx.recv_timeout(std::time::Duration::from_secs(2)) {
+            Ok(true) => Ok(()),
+            _ => Err("needs-permission".into()),
+        }
     }
 }
 

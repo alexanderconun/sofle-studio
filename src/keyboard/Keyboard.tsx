@@ -34,7 +34,6 @@ import { useLocalStorageState } from "../misc/useLocalStorageState";
 import { planImport, saveLayoutFile, toLayoutFile } from "./layoutFile";
 import { emit, listen } from "@tauri-apps/api/event";
 import { Window } from "@tauri-apps/api/window";
-import { invoke } from "@tauri-apps/api/core";
 
 type BehaviorMap = Record<number, GetBehaviorDetailsResponse>;
 
@@ -510,15 +509,6 @@ export default function Keyboard() {
     const w = await Window.getByLabel("overlay");
     if (!w) return;
     if (await w.isVisible()) return w.hide();
-    try {
-      await invoke("start_key_watch");
-    } catch (e) {
-      if (e === "needs-permission") {
-        setFileStatus(
-          "To light up pressed keys, allow Sofle Studio in System Settings → Privacy & Security → Input Monitoring, then restart the app."
-        );
-      }
-    }
     await w.show();
   }, []);
 

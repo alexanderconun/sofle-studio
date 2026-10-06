@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { emit, listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { invoke } from "@tauri-apps/api/core";
 import { X } from "lucide-react";
 import { useLocalStorageState } from "../misc/useLocalStorageState";
 import type { Keymap as KeymapMsg, PhysicalLayout } from "@zmkfirmware/zmk-studio-ts-client/keymap";
@@ -26,6 +27,22 @@ export const Overlay = () => {
   const [data, setData] = useState<OverlayData | null>(null);
   const [held, setHeld] = useState({ lower: false, raise: false });
   const [keysDown, setKeysDown] = useState<Set<number>>(new Set());
+  const [noPermission, setNoPermission] = useState(false);
+
+  // Start watching keys whenever the map is shown; retry on each show so
+  // granting the permission is picked up after a restart.
+  useEffect(() => {
+    const check = () =>
+      invoke("start_key_watch").then(
+        () => setNoPermission(false),
+        () => setNoPermission(true)
+      );
+    const un = getCurrentWindow().onFocusChanged(({ payload }) => payload && check());
+    check();
+    return () => {
+      un.then((f) => f());
+    };
+  }, []);
   const [opacity, setOpacity] = useLocalStorageState<number>("overlayOpacity", 0.9, {
     deserialize: (v) => Math.min(1, Math.max(0.2, parseFloat(v) || 0.9)),
   });
@@ -117,6 +134,12 @@ export const Overlay = () => {
           <X className="size-4" />
         </button>
       </div>
+      {noPermission && (
+        <div className="px-3 py-1 text-[0.75rem] bg-amber-500/20 text-amber-200">
+          Pressed keys can't light up: allow Sofle Studio in System Settings → Privacy &amp; Security →
+          Input Monitoring (remove the old entry with − first), then restart the app.
+        </div>
+      )}
       <div className="flex-1 min-h-0 grid items-center justify-center p-2">
         <Keymap
           keymap={data.keymap}
