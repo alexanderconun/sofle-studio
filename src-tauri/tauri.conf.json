@@ -6,10 +6,10 @@
     "devUrl": "http://localhost:5173",
     "frontendDist": "../dist/"
   },
-  "productName": "ZMK Studio",
+  "productName": "Sofle Studio",
   "mainBinaryName": "zmk-studio",
   "version": "0.3.1",
-  "identifier": "dev.zmk.studio",
+  "identifier": "dev.zmk.studio.sofle",
   "bundle": {
     "active": true,
     "category": "Productivity",
@@ -69,9 +69,26 @@
         "fullscreen": false,
         "height": 600,
         "resizable": true,
-        "title": "ZMK Studio",
-        "width": 800
+        "title": "Sofle Studio",
+        "width": 800,
+        "label": "main"
+      },
+      {
+        "label": "overlay",
+        "title": "Sofle map",
+        "url": "index.html?overlay",
+        "visible": false,
+        "alwaysOnTop": true,
+        "visibleOnAllWorkspaces": true,
+        "width": 640,
+        "height": 260,
+        "resizable": true,
+        "focus": false,
+        "transparent": true,
+        "decorations": false,
+        "shadow": false
       }
-    ]
+    ],
+    "macOSPrivateApi": true
   }
 }

@@ -80,14 +80,14 @@ enum Mods {
 }
 
 const mod_labels: Record<Mods, string> = {
-  [Mods.LeftControl]: "L Ctrl",
-  [Mods.LeftShift]: "L Shift",
-  [Mods.LeftAlt]: "L Alt",
-  [Mods.LeftGUI]: "L GUI",
-  [Mods.RightControl]: "R Ctrl",
-  [Mods.RightShift]: "R Shift",
-  [Mods.RightAlt]: "R Alt",
-  [Mods.RightGUI]: "R GUI",
+  [Mods.LeftControl]: "⌃ Ctrl",
+  [Mods.LeftShift]: "⇧ Shift",
+  [Mods.LeftAlt]: "⌥ Opt",
+  [Mods.LeftGUI]: "⌘ Cmd",
+  [Mods.RightControl]: "R ⌃ Ctrl",
+  [Mods.RightShift]: "R ⇧ Shift",
+  [Mods.RightAlt]: "R ⌥ Opt",
+  [Mods.RightGUI]: "R ⌘ Cmd",
 };
 
 const all_mods = [

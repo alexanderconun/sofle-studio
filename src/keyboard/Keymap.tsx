@@ -8,7 +8,7 @@ import {
   LayoutZoom,
   PhysicalLayout as PhysicalLayoutComp,
 } from "./PhysicalLayout";
-import { HidUsageLabel } from "./HidUsageLabel";
+import { keyFace } from "./KeyFace";
 
 type BehaviorMap = Record<number, GetBehaviorDetailsResponse>;
 
@@ -48,11 +48,16 @@ export const Keymap = ({
       };
     }
 
+    const binding = keymap.layers[selectedLayerIndex].bindings[i];
+    const face = keyFace(
+      behaviors[binding.behaviorId]?.displayName,
+      binding,
+      (id) => keymap.layers.find((l) => l.id === id)?.name || `${id}`
+    );
     return {
       id: `${keymap.layers[selectedLayerIndex].id}-${i}`,
-      header:
-        behaviors[keymap.layers[selectedLayerIndex].bindings[i].behaviorId]
-          ?.displayName || "Unknown",
+      header: face.header,
+      faded: face.faded,
       x: k.x / 100.0,
       y: k.y / 100.0,
       width: k.width / 100,
@@ -60,11 +65,7 @@ export const Keymap = ({
       r: (k.r || 0) / 100.0,
       rx: (k.rx || 0) / 100.0,
       ry: (k.ry || 0) / 100.0,
-      children: (
-        <HidUsageLabel
-          hid_usage={keymap.layers[selectedLayerIndex].bindings[i].param1}
-        />
-      ),
+      children: face.content,
     };
   });
 

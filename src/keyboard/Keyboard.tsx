@@ -31,6 +31,9 @@ import { LockStateContext } from "../rpc/LockStateContext";
 import { LockState } from "@zmkfirmware/zmk-studio-ts-client/core";
 import { deserializeLayoutZoom, LayoutZoom } from "./PhysicalLayout";
 import { useLocalStorageState } from "../misc/useLocalStorageState";
+import { planImport, saveLayoutFile, toLayoutFile } from "./layoutFile";
+import { emit, listen } from "@tauri-apps/api/event";
+import { Window } from "@tauri-apps/api/window";
 
 type BehaviorMap = Record<number, GetBehaviorDetailsResponse>;
 
@@ -490,6 +493,79 @@ export default function Keyboard() {
     [conn, undoRedo, keymap]
   );
 
+  // Keep the floating layer map in sync with what's loaded here.
+  const layout = layouts?.[selectedPhysicalLayoutIndex];
+  useEffect(() => {
+    if (!window.__TAURI_INTERNALS__ || !keymap || !layout) return;
+    const send = () => emit("overlay-data", { keymap, layout, behaviors });
+    send();
+    const unlisten = listen("overlay-ready", send);
+    return () => {
+      unlisten.then((f) => f());
+    };
+  }, [keymap, layout, behaviors]);
+
+  const toggleOverlay = useCallback(async () => {
+    const w = await Window.getByLabel("overlay");
+    if (!w) return;
+    (await w.isVisible()) ? await w.hide() : await w.show();
+  }, []);
+
+  const [fileStatus, setFileStatus] = useState<string | null>(null);
+
+  const exportLayout = useCallback(async () => {
+    if (!keymap) return;
+    try {
+      const path = await saveLayoutFile(toLayoutFile(keymap, behaviors));
+      setFileStatus(`Saved to ${path}`);
+    } catch (e) {
+      setFileStatus(`Export failed: ${e instanceof Error ? e.message : e}`);
+    }
+  }, [keymap, behaviors]);
+
+  const importLayout = useCallback(
+    async (file: File) => {
+      if (!conn.conn || !keymap) return;
+      try {
+        const plan = planImport(JSON.parse(await file.text()), keymap, behaviors);
+        let applied = 0;
+        for (const c of plan.changes) {
+          setFileStatus(`Importing… ${applied}/${plan.changes.length}`);
+          const resp = await call_rpc(conn.conn, {
+            keymap: {
+              setLayerBinding: {
+                layerId: c.layerId,
+                keyPosition: c.keyPosition,
+                binding: c.binding,
+              },
+            },
+          });
+          if (resp.keymap?.setLayerBinding !== SetLayerBindingResponse.SET_LAYER_BINDING_RESP_OK) {
+            continue;
+          }
+          applied++;
+          setKeymap(
+            produce((draft: any) => {
+              draft.layers[c.layerIndex].bindings[c.keyPosition] = c.binding;
+            })
+          );
+        }
+        const notes = [
+          `Imported ${applied} of ${plan.changes.length} changed keys.`,
+          plan.unknownBehaviors.length
+            ? `Skipped unknown behaviors: ${plan.unknownBehaviors.join(", ")}.`
+            : "",
+          plan.skippedLayers ? `${plan.skippedLayers} extra layer(s) ignored.` : "",
+          applied ? "Click Save to keep it on the keyboard." : "",
+        ];
+        setFileStatus(notes.filter(Boolean).join(" "));
+      } catch (e) {
+        setFileStatus(`Import failed: ${e}`);
+      }
+    },
+    [conn, keymap, behaviors]
+  );
+
   useEffect(() => {
     if (!keymap?.layers) return;
 
@@ -526,6 +602,42 @@ export default function Keyboard() {
               onRemoveClicked={removeLayer}
               onLayerNameChanged={changeLayerName}
             />
+            <div className="flex flex-col gap-1 mt-4">
+              <button
+                type="button"
+                className="h-8 rounded px-2 bg-base-100 hover:bg-primary hover:text-primary-content"
+                onClick={exportLayout}
+              >
+                Export layout
+              </button>
+              <label className="h-8 rounded px-2 bg-base-100 hover:bg-primary hover:text-primary-content flex items-center justify-center cursor-pointer">
+                Import layout
+                <input
+                  type="file"
+                  accept=".json,application/json"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    e.target.value = "";
+                    if (f) importLayout(f);
+                  }}
+                />
+              </label>
+              {window.__TAURI_INTERNALS__ && (
+                <button
+                  type="button"
+                  className="h-8 rounded px-2 bg-base-100 hover:bg-primary hover:text-primary-content"
+                  onClick={toggleOverlay}
+                >
+                  Floating map
+                </button>
+              )}
+              {fileStatus && (
+                <p className="text-[0.75rem] max-w-48 break-words text-base-content/70">
+                  {fileStatus}
+                </p>
+              )}
+            </div>
           </div>
         )}
       </div>

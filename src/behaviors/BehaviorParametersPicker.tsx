@@ -6,6 +6,7 @@ export interface BehaviorParametersPickerProps {
   param1?: number;
   param2?: number;
   metadata: BehaviorBindingParametersSet[];
+  behaviorName?: string;
   layers: { id: number; name: string }[];
   onParam1Changed: (value?: number) => void;
   onParam2Changed: (value?: number) => void;
@@ -15,6 +16,7 @@ export const BehaviorParametersPicker = ({
   param1,
   param2,
   metadata,
+  behaviorName,
   layers,
   onParam1Changed,
   onParam2Changed,
@@ -24,6 +26,7 @@ export const BehaviorParametersPicker = ({
       <div>
         <ParameterValuePicker
           values={metadata.flatMap((m) => m.param1)}
+          behaviorName={behaviorName}
           onValueChanged={onParam1Changed}
           layers={layers}
         />
@@ -41,6 +44,7 @@ export const BehaviorParametersPicker = ({
       <>
         <ParameterValuePicker
           values={metadata.flatMap((m) => m.param1)}
+          behaviorName={behaviorName}
           value={param1}
           layers={layers}
           onValueChanged={onParam1Changed}

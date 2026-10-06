@@ -48,3 +48,23 @@ export const Example: Story = {
     ],
   },
 };
+
+const names = [
+  "Backlight", "Bluetooth", "Bootloader", "Caps Word", "enc_key_press",
+  "External Power", "Grave/Escape", "Key Press", "Key Repeat", "Key Toggle",
+  "Layer-Tap", "Mod-Tap", "Momentary Layer", "Mouse Key Press", "mouse_move",
+  "mouse_scroll", "None", "Output Selection", "Reset", "rsr_trans", "rsr_vol",
+  "scroll_encoder", "Sticky Key", "Sticky Layer", "Studio Unlock", "To Layer",
+  "Toggle Layer", "Transparent", "Underglow", "z_so_off",
+];
+
+export const SofleBehaviors: Story = {
+  args: {
+    binding: { behaviorId: 7, param1: 0, param2: 0 },
+    behaviors: names.map((displayName, id) => ({
+      id,
+      displayName,
+      metadata: [{ param1: [], param2: [] }],
+    })),
+  },
+};
